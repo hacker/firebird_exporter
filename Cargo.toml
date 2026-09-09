@@ -2,5 +2,23 @@
 name = "firebird_exporter"
 version = "0.1.0"
 edition = "2024"
+description = "Firebird exporter for prometheus."
+license = "MIT"
+repository = "https://github.com/hacker/firebird_exporter"
+homepage = "https://github.com/hacker/firebird_exporter"
 
 [dependencies]
+anyhow = "1.0.104"
+dotenvy = "0.15.7"
+prometheus = "0.14.0"
+rsfbclient = { version = "0.28.0", default-features = false, features = ["pure_rust"] }
+tiny_http = "0.12.0"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
+ureq = { version = "3.4.1", default-features = false }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
