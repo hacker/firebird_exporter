@@ -47,10 +47,18 @@ func fixupDashboard(jsonData []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	if links, ok := dashboardMap["links"].([]any); ok && len(links) > 0 {
-		if link, ok := links[0].(map[string]any); ok {
-			delete(link, "placement")
+	if links, ok := dashboardMap["links"].([]any); ok {
+		if len(links) > 0 {
+			if link, ok := links[0].(map[string]any); ok {
+				delete(link, "placement")
+			} else {
+				return nil, fmt.Errorf("expected first link to be an object")
+			}
+		} else {
+			return nil, fmt.Errorf("expected at least one link in 'links' array")
 		}
+	} else {
+		return nil, fmt.Errorf("expected 'links' field to be an array")
 	}
 
 	return json.MarshalIndent(dashboardMap, "", "  ")
