@@ -66,6 +66,15 @@ func buildFirebirdDashboard() (dashboard.Dashboard, error) {
 	dsVarBuilder := dashboard.NewDatasourceVariableBuilder("DS_PROMETHEUS").
 		Type("prometheus").
 		Label("Datasource")
+
+	// Add instance variable for selecting firebird instances
+	query := dashboard.NewStringOrMap()
+	query.String = ptrStr("label_values(firebird_up, instance)")
+	instanceVarBuilder := dashboard.NewQueryVariableBuilder("instance").
+		Datasource(ds).
+		Query(*query).
+		Label("Instance")
+
 	builder := dashboard.NewDashboardBuilder("Firebird Exporter").
 		Description("Monitoring dashboard for Firebird database metrics").
 		Tags([]string{"firebird", "database", "monitoring"}).
@@ -77,18 +86,19 @@ func buildFirebirdDashboard() (dashboard.Dashboard, error) {
 			Type(dashboard.DashboardLinkTypeLink).
 			Icon("external link").
 			TargetBlank(true)).
-		WithVariable(dsVarBuilder)
+		WithVariable(dsVarBuilder).
+		WithVariable(instanceVarBuilder)
 
 	// Add panels
-	builder = builder.WithPanel(stateTimelinePanelBuilder("Database Status", "firebird_up", ds, 0, 0, 21, 3))
-	builder = builder.WithPanel(statPanelBuilder("Read-Only Mode", "firebird_database_read_only", ds, 21, 0, 3, 3))
-	builder = builder.WithPanel(timeseriesPanelBuilder("Attachments", "firebird_attachments", "{{state}}", "none", ds, 0, 3))
-	builder = builder.WithPanel(timeseriesPanelBuilder("Transactions", "firebird_transactions", "{{state}}", "none", ds, 12, 3))
-	builder = builder.WithPanel(timeseriesPanelBuilder("Statements", "firebird_statements", "{{state}}", "none", ds, 0, 11))
+	builder = builder.WithPanel(stateTimelinePanelBuilder("Database Status", "firebird_up{instance=\"$instance\"}", ds, 0, 0, 21, 3))
+	builder = builder.WithPanel(statPanelBuilder("Read-Only Mode", "firebird_database_read_only{instance=\"$instance\"}", ds, 21, 0, 3, 3))
+	builder = builder.WithPanel(timeseriesPanelBuilder("Attachments", "firebird_attachments{instance=\"$instance\"}", "{{state}}", "none", ds, 0, 3))
+	builder = builder.WithPanel(timeseriesPanelBuilder("Transactions", "firebird_transactions{instance=\"$instance\"}", "{{state}}", "none", ds, 12, 3))
+	builder = builder.WithPanel(timeseriesPanelBuilder("Statements", "firebird_statements{instance=\"$instance\"}", "{{state}}", "none", ds, 0, 11))
 	builder = builder.WithPanel(ioPanelBuilder("I/O Operations", ds, 12, 11))
 	builder = builder.WithPanel(memoryPanelBuilder("Memory Usage", ds, 0, 19))
-	builder = builder.WithPanel(timeseriesPanelBuilder("Transaction Throughput", "rate(firebird_database_next_transaction[5m])", "delta", "si: xact/s", ds, 0, 27))
-	builder = builder.WithPanel(timeseriesPanelBuilder("Transaction ID Window", "firebird_database_next_transaction - firebird_database_oldest_active", "transactions", "none", ds, 12, 27))
+	builder = builder.WithPanel(timeseriesPanelBuilder("Transaction Throughput", "rate(firebird_database_next_transaction{instance=\"$instance\"}[5m])", "delta", "si: xact/s", ds, 0, 27))
+	builder = builder.WithPanel(timeseriesPanelBuilder("Transaction ID Window", "firebird_database_next_transaction{instance=\"$instance\"} - firebird_database_oldest_active{instance=\"$instance\"}", "transactions", "none", ds, 12, 27))
 
 	return builder.Build()
 }
@@ -152,16 +162,16 @@ func ioPanelBuilder(title string, ds common.DataSourceRef, x, y uint32) *timeser
 		Legend(common.NewVizLegendOptionsBuilder().
 			ShowLegend(true)).
 		WithTarget(prometheus.NewDataqueryBuilder().
-			Expr("rate(firebird_io_page_reads_total[5m])").
+			Expr("rate(firebird_io_page_reads_total{instance=\"$instance\"}[5m])").
 			LegendFormat("read page")).
 		WithTarget(prometheus.NewDataqueryBuilder().
-			Expr("rate(firebird_io_page_writes_total[5m])").
+			Expr("rate(firebird_io_page_writes_total{instance=\"$instance\"}[5m])").
 			LegendFormat("write page")).
 		WithTarget(prometheus.NewDataqueryBuilder().
-			Expr("rate(firebird_io_page_fetches_total[5m])").
+			Expr("rate(firebird_io_page_fetches_total{instance=\"$instance\"}[5m])").
 			LegendFormat("fetch page")).
 		WithTarget(prometheus.NewDataqueryBuilder().
-			Expr("rate(firebird_io_page_marks_total[5m])").
+			Expr("rate(firebird_io_page_marks_total{instance=\"$instance\"}[5m])").
 			LegendFormat("mark page"))
 }
 
@@ -174,10 +184,10 @@ func memoryPanelBuilder(title string, ds common.DataSourceRef, x, y uint32) *tim
 		Legend(common.NewVizLegendOptionsBuilder().
 			ShowLegend(true)).
 		WithTarget(prometheus.NewDataqueryBuilder().
-			Expr("firebird_memory_used_bytes").
+			Expr("firebird_memory_used_bytes{instance=\"$instance\"}").
 			LegendFormat("used")).
 		WithTarget(prometheus.NewDataqueryBuilder().
-			Expr("firebird_memory_allocated_bytes").
+			Expr("firebird_memory_allocated_bytes{instance=\"$instance\"}").
 			LegendFormat("allocated"))
 }
 
