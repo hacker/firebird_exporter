@@ -5,11 +5,11 @@ RUN apk add --no-cache musl-dev
 
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && echo "fn main() {}" > src/main.rs \
-    && cargo build --release \
+    && cargo build --release --no-default-features \
     && rm src/main.rs
 
 COPY src src/
-RUN cargo build --release
+RUN cargo build --release --no-default-features
 
 FROM alpine:3.24 AS alpine
 

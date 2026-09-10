@@ -5,6 +5,7 @@ static INIT: Once = Once::new();
 
 pub fn tinnitus() -> anyhow::Result<()> {
     INIT.call_once(|| {
+        #[cfg(feature = "dotenv")]
         if let Err(e) = dotenvy::dotenv() && !e.not_found() {
             eprintln!("Warning: could not load .env: {}", e);
         }

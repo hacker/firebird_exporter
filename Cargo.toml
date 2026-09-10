@@ -9,13 +9,17 @@ homepage = "https://github.com/hacker/firebird_exporter"
 
 [dependencies]
 anyhow = "1.0.104"
-dotenvy = "0.15.7"
+dotenvy = { version = "0.15.7", optional = true }
 prometheus = "0.14.0"
 rsfbclient = { version = "0.28.0", default-features = false, features = ["pure_rust"] }
 tiny_http = "0.12.0"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
 ureq = { version = "3.4.1", default-features = false }
+
+[features]
+default = ["dotenv"]
+dotenv = ["dep:dotenvy"]
 
 [profile.release]
 lto = "fat"
