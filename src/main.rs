@@ -1,4 +1,5 @@
 use firebird_exporter::{FirebirdMetricsCollector, tinnitus};
+use anyhow::Context;
 use prometheus::{Encoder, Registry, TextEncoder};
 use std::sync::Arc;
 use tiny_http::{Response, Server};
@@ -21,7 +22,8 @@ fn main() -> anyhow::Result<()> {
 
     info!("Starting Firebird Prometheus exporter");
 
-    let database_url = std::env::var("DATABASE_URL")?;
+    let database_url = std::env::var("DATABASE_URL")
+        .context("DATABASE_URL is not set")?;
 
     info!("Listening on {}", listen_addr);
 
