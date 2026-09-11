@@ -169,8 +169,35 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  build-dashboard:
+    needs: check-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: set up go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: build dashboard
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        working-directory: dashboard
+        run: go run main.go --output firebird-exporter-dashboard-${VERSION}.json
+
+      - name: upload dashboard artifact
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard
+          path: dashboard/firebird-exporter-dashboard-${{ env.VERSION }}.json
+          if-no-files-found: error
+          retention-days: 1
+
   create-release:
-    needs: [merge-manifests, publish-chart, check-version]
+    needs: [merge-manifests, publish-chart, build-dashboard, check-version]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -182,10 +209,17 @@ jobs:
         with:
           name: chart
 
+      - name: download dashboard artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dashboard
+
       - name: create release
         uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           draft: true
           prerelease: false
-          files: firebird_exporter-${{ needs.check-version.outputs.version }}.tgz
+          files: |
+            firebird_exporter-${{ needs.check-version.outputs.version }}.tgz
+            firebird-exporter-dashboard-${{ needs.check-version.outputs.version }}.json
