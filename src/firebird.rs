@@ -66,6 +66,20 @@ impl FirebirdMetricsCollector {
             return Ok(metrics);
         };
 
+        // Detect server architecture to determine stat group
+        let stat_group = if let Ok(Some(server_mode)) = conn.query_first::<_, (String,)>(
+            "SELECT RDB$CONFIG_VALUE FROM RDB$CONFIG WHERE RDB$CONFIG_NAME = 'ServerMode'",
+            (),
+        ) {
+            match server_mode.0.as_str() {
+                "Super" | "ThreadedDedicated" => 0,
+                _ => 1,
+            }
+        } else {
+            warn!("Failed to detect ServerMode, defaulting to aggregated stat group");
+            1
+        };
+
         // Database stats
         if let Ok(Some((
             oldest_transaction,
@@ -184,10 +198,10 @@ impl FirebirdMetricsCollector {
         // IO stats
         if let Ok(Some((reads, writes, fetches, marks))) = conn.query_first::<_, (i64, i64, i64, i64)>(
             "
-            SELECT MON$PAGE_READS, MON$PAGE_WRITES, MON$PAGE_FETCHES, MON$PAGE_MARKS
-            FROM MON$IO_STATS WHERE MON$STAT_GROUP = 0 ROWS 1
+            SELECT COALESCE(SUM(CAST(MON$PAGE_READS AS INT)), 0), COALESCE(SUM(CAST(MON$PAGE_WRITES AS INT)), 0), COALESCE(SUM(CAST(MON$PAGE_FETCHES AS INT)), 0), COALESCE(SUM(CAST(MON$PAGE_MARKS AS INT)), 0)
+            FROM MON$IO_STATS WHERE MON$STAT_GROUP = ?
             ",
-            (),
+            (stat_group,),
         ).inspect_err(|e| error!("Failed to query MON$IO_STATS: {}", e)) {
             metrics.extend(
                 [
@@ -206,10 +220,10 @@ impl FirebirdMetricsCollector {
         if let Ok(Some((memory_used, memory_allocated, max_memory_used, max_memory_allocated))) =
             conn.query_first::<_, (i64, i64, i64, i64)>(
                 "
-                SELECT MON$MEMORY_USED, MON$MEMORY_ALLOCATED, MON$MAX_MEMORY_USED, MON$MAX_MEMORY_ALLOCATED
-                FROM MON$MEMORY_USAGE WHERE MON$STAT_GROUP = 0 ROWS 1
+                SELECT COALESCE(SUM(CAST(MON$MEMORY_USED AS INT)), 0), COALESCE(SUM(CAST(MON$MEMORY_ALLOCATED AS INT)), 0), COALESCE(SUM(CAST(MON$MAX_MEMORY_USED AS INT)), 0), COALESCE(SUM(CAST(MON$MAX_MEMORY_ALLOCATED AS INT)), 0)
+                FROM MON$MEMORY_USAGE WHERE MON$STAT_GROUP = ?
                 ",
-                (),
+                (stat_group,),
             ).inspect_err(|e| error!("Failed to query MON$MEMORY_USAGE: {}", e))
         {
             metrics.extend(
