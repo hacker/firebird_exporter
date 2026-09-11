@@ -8,7 +8,27 @@ env:
   OCI_REPO: ghcr.io/${{ github.repository }}
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: check versions match
+        run: |
+          cargo_version=$(yq -r '.package.version' Cargo.toml)
+          chart_version=$(yq -r '.version' charts/firebird_exporter/Chart.yaml)
+          app_version=$(yq -r '.appVersion' charts/firebird_exporter/Chart.yaml)
+
+          if [[ "$cargo_version" != "$chart_version" ]] || [[ "$cargo_version" != "$app_version" ]]; then
+            echo "ERROR: Version mismatch!"
+            echo "Cargo.toml version: $cargo_version"
+            echo "Chart.yaml version: $chart_version"
+            echo "Chart.yaml appVersion: $app_version"
+            exit 1
+          fi
+
   build-release:
+    needs: check-version
     strategy:
       matrix:
         include:
