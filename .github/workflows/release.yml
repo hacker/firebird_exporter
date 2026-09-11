@@ -11,22 +11,29 @@ env:
 jobs:
   check-version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: check versions match
+      - name: check versions match tag
+        id: version
         run: |
           cargo_version=$(yq -r '.package.version' Cargo.toml)
           chart_version=$(yq -r '.version' charts/firebird_exporter/Chart.yaml)
           app_version=$(yq -r '.appVersion' charts/firebird_exporter/Chart.yaml)
+          tag_version=${{ github.ref_name }}
 
-          if [[ "$cargo_version" != "$chart_version" ]] || [[ "$cargo_version" != "$app_version" ]]; then
+          if [[ "$cargo_version" != "$chart_version" ]] || [[ "$cargo_version" != "$app_version" ]] || [[ "$cargo_version" != "$tag_version" ]]; then
             echo "ERROR: Version mismatch!"
             echo "Cargo.toml version: $cargo_version"
             echo "Chart.yaml version: $chart_version"
             echo "Chart.yaml appVersion: $app_version"
+            echo "Tag version: $tag_version"
             exit 1
           fi
+
+          echo "version=$cargo_version" >> $GITHUB_OUTPUT
 
   build-release:
     needs: check-version
@@ -128,7 +135,7 @@ jobs:
         run: docker buildx imagetools inspect ${{ env.OCI_REPO }}:${{ steps.meta.outputs.version }}
 
   publish-chart:
-    needs: merge-manifests
+    needs: [merge-manifests, check-version]
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -146,18 +153,34 @@ jobs:
         run: helm lint charts/firebird_exporter/
 
       - name: package and push chart
+        env:
+          CHART_VERSION: ${{ needs.check-version.outputs.version }}
         run: |
-          chart_version=$(yq -r '.version' charts/firebird_exporter/Chart.yaml)
           helm package charts/firebird_exporter/
-          helm push firebird_exporter-${chart_version}.tgz oci://${{ env.OCI_CHART_REPO }}
+          helm push firebird_exporter-${CHART_VERSION}.tgz oci://${{ env.OCI_CHART_REPO }}
+
+      - name: upload chart artifact
+        env:
+          CHART_VERSION: ${{ needs.check-version.outputs.version }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: chart
+          path: firebird_exporter-${{ env.CHART_VERSION }}.tgz
+          if-no-files-found: error
+          retention-days: 1
 
   create-release:
-    needs: merge-manifests
+    needs: [merge-manifests, publish-chart, check-version]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
+
+      - name: download chart artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: chart
 
       - name: create release
         uses: softprops/action-gh-release@v3
@@ -165,3 +188,4 @@ jobs:
           generate_release_notes: true
           draft: true
           prerelease: false
+          files: firebird_exporter-${{ needs.check-version.outputs.version }}.tgz
