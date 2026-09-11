@@ -1,28 +1,33 @@
 # Firebird Exporter
 
-Prometheus exporter for Firebird databases.
+[GitHub](https://github.com/hacker/firebird_exporter) • Prometheus exporter for Firebird databases.
 
 Only tested with Firebird 5. Just the metrics I came up with in times of need.
 
-## Building
+## Quick Start
+
+### Docker
 
 ```bash
-cargo build --release
+docker run -e DATABASE_URL="firebird://host.docker.internal:3050/path/to/database.fdb" \
+  -p 9123:9123 \
+  ghcr.io/hacker/firebird_exporter:latest
 ```
+
+Metrics available at `http://localhost:9123/metrics`
+
+### Kubernetes
+
+A Helm chart is available in [charts/firebird_exporter](charts/firebird_exporter).
 
 ## Configuration
 
-Set environment variables:
+Environment variables:
 
-- `DATABASE_URL` - Firebird database connection URL (required)
+- `DATABASE_URL` - Firebird connection string
 - `HTTP_LISTEN_ADDR` - Listen address (default: `0.0.0.0:9123`)
 
-Example:
-
-```bash
-export DATABASE_URL="firebird://localhost:3050/path/to/database.fdb"
-export HTTP_LISTEN_ADDR="127.0.0.1:9123"
-```
+When built with the `dotenv` feature (default), load from `.env` file.
 
 ## Running
 
@@ -34,49 +39,62 @@ Metrics available at `http://localhost:9123/metrics` (or whatever you're listeni
 
 Health check: `./firebird_exporter healthcheck`
 
+## Grafana Dashboard
+
+A pre-built dashboard is available in the
+[releases](https://github.com/hacker/firebird_exporter/releases) as
+`firebird-exporter-dashboard-<version>.json`.
+
 ## Metrics
 
 ### Connectivity
 
-- `firebird_up` - Firebird database connectivity indicator (0 or 1)
+- `firebird_up` - Database connectivity (0 or 1)
 
-### Database Statistics
+### Database
 
-- `firebird_database_oldest_transaction` - Oldest transaction ID in Firebird database
+- `firebird_database_oldest_transaction` - Oldest transaction ID
 - `firebird_database_oldest_active` - Oldest active transaction ID
 - `firebird_database_oldest_snapshot` - Oldest snapshot transaction ID
 - `firebird_database_next_transaction` - Next transaction ID
 - `firebird_database_page_buffers` - Database page buffers
-- `firebird_database_shutdown_mode` - Database shutdown mode
-- `firebird_database_sweep_interval` - Database sweep interval
-- `firebird_database_pages_total` - Total number of pages in Firebird database
-- `firebird_database_backup_state` - Database backup state
+- `firebird_database_shutdown_mode` - Shutdown mode
+- `firebird_database_sweep_interval` - Sweep interval
+- `firebird_database_pages_total` - Total pages
+- `firebird_database_backup_state` - Backup state
 - `firebird_database_next_attachment` - Next attachment ID
 - `firebird_database_next_statement` - Next statement ID
-- `firebird_database_read_only` - Database read-only flag (0 or 1)
+- `firebird_database_read_only` - Read-only flag (0 or 1)
 
-### Attachments
+### Attachments, Transactions, Statements
 
-- `firebird_attachments` - Firebird attachments by state (labels: `state` with values `idle`, `active`)
+- `firebird_attachments` - Attachments by state (`idle`, `active`)
+- `firebird_transactions` - Transactions by state (`idle`, `active`)
+- `firebird_statements` - Statements by state (`idle`, `active`, `stalled`)
 
-### Transactions
+### I/O
 
-- `firebird_transactions` - Firebird transactions by state (labels: `state` with values `idle`, `active`)
+- `firebird_io_page_reads_total` - Page read operations
+- `firebird_io_page_writes_total` - Page write operations
+- `firebird_io_page_fetches_total` - Page fetch operations
+- `firebird_io_page_marks_total` - Page mark operations
 
-### Statements
+### Memory
 
-- `firebird_statements` - Firebird statements by state (labels: `state` with values `idle`, `active`, `stalled`)
+- `firebird_memory_used_bytes` - Current memory used
+- `firebird_memory_allocated_bytes` - Current memory allocated
+- `firebird_memory_max_used_bytes` - Maximum memory used
+- `firebird_memory_max_allocated_bytes` - Maximum memory allocated
 
-### I/O Statistics
+## Building
 
-- `firebird_io_page_reads_total` - Total page read operations (counter)
-- `firebird_io_page_writes_total` - Total page write operations (counter)
-- `firebird_io_page_fetches_total` - Total page fetch operations (counter)
-- `firebird_io_page_marks_total` - Total page mark operations (counter)
+```bash
+cargo build --release
+```
 
-### Memory Usage
+The `dotenv` feature (enabled by default) allows loading environment variables
+from a `.env` file. To build without it:
 
-- `firebird_memory_used_bytes` - Current memory used (gauge)
-- `firebird_memory_allocated_bytes` - Current memory allocated (gauge)
-- `firebird_memory_max_used_bytes` - Maximum memory used (counter)
-- `firebird_memory_max_allocated_bytes` - Maximum memory allocated (counter)
+```bash
+cargo build --release --no-default-features
+```
