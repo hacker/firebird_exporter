@@ -5,7 +5,7 @@ on:
     tags: ['[0-9]*']
 
 env:
-  IMAGE: ghcr.io/${{ github.repository }}
+  OCI_REPO: ghcr.io/${{ github.repository }}
 
 jobs:
   build-release:
@@ -42,7 +42,7 @@ jobs:
         platforms: ${{ matrix.platform }}
         provenance: false
         push: true
-        outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true
+        outputs: type=image,name=${{ env.OCI_REPO }},push-by-digest=true,name-canonical=true
 
     - name: export digest
       run: |
@@ -89,7 +89,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           context: git
-          images: ${{ env.IMAGE }}
+          images: ${{ env.OCI_REPO }}
           tags: |
             type=ref,event=tag
             type=semver,pattern={{version}}
@@ -101,12 +101,12 @@ jobs:
         run: |
           docker buildx imagetools create \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.IMAGE }}@sha256:%s ' *)
+            $(printf '${{ env.OCI_REPO }}@sha256:%s ' *)
         env:
           DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
 
       - name: inspect image
-        run: docker buildx imagetools inspect ${{ env.IMAGE }}:${{ steps.meta.outputs.version }}
+        run: docker buildx imagetools inspect ${{ env.OCI_REPO }}:${{ steps.meta.outputs.version }}
 
   create-release:
     needs: merge-manifests
