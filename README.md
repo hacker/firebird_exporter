@@ -18,7 +18,7 @@ Metrics available at `http://localhost:9123/metrics`
 
 ### Kubernetes
 
-A Helm chart is available in [charts/firebird_exporter](charts/firebird_exporter).
+Helm chart available at `oci://ghcr.io/hacker/firebird_exporter-chart/firebird-exporter`
 
 ## Configuration
 
