@@ -105,8 +105,8 @@ func buildFirebirdDashboard() (dashboard.Dashboard, error) {
 	builder = builder.WithPanel(timeseriesPanelBuilder("Statements", "firebird_statements{instance=\"$instance\"}", "{{state}}", "none", ds, 0, 11))
 	builder = builder.WithPanel(ioPanelBuilder("I/O Operations", ds, 12, 11))
 	builder = builder.WithPanel(memoryPanelBuilder("Memory Usage", ds, 0, 19))
-	builder = builder.WithPanel(timeseriesPanelBuilder("Transaction Throughput", "rate(firebird_database_next_transaction{instance=\"$instance\"}[5m])", "delta", "si: xact/s", ds, 0, 27))
-	builder = builder.WithPanel(timeseriesPanelBuilder("Transaction ID Window", "firebird_database_next_transaction{instance=\"$instance\"} - firebird_database_oldest_active{instance=\"$instance\"}", "transactions", "none", ds, 12, 27))
+	builder = builder.WithPanel(timeseriesPanelBuilder("Transaction Throughput", "rate(firebird_database_next_transaction{instance=\"$instance\"}[5m])", "transactions", "si: xact/s", ds, 0, 27))
+	builder = builder.WithPanel(timeseriesPanelBuilder("Transaction ID Window", "firebird_database_next_transaction{instance=\"$instance\"} - firebird_database_oldest_active{instance=\"$instance\"}", "∆", "none", ds, 12, 27))
 
 	return builder.Build()
 }
