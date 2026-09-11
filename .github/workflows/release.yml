@@ -157,7 +157,7 @@ jobs:
           CHART_VERSION: ${{ needs.check-version.outputs.version }}
         run: |
           helm package charts/firebird_exporter/
-          helm push firebird_exporter-${CHART_VERSION}.tgz oci://${{ env.OCI_CHART_REPO }}
+          helm push firebird-exporter-${CHART_VERSION}.tgz oci://${{ env.OCI_CHART_REPO }}
 
       - name: upload chart artifact
         env:
@@ -165,7 +165,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: chart
-          path: firebird_exporter-${{ env.CHART_VERSION }}.tgz
+          path: firebird-exporter-${{ env.CHART_VERSION }}.tgz
           if-no-files-found: error
           retention-days: 1
 
@@ -221,5 +221,5 @@ jobs:
           draft: true
           prerelease: false
           files: |
-            firebird_exporter-${{ needs.check-version.outputs.version }}.tgz
+            firebird-exporter-${{ needs.check-version.outputs.version }}.tgz
             firebird-exporter-dashboard-${{ needs.check-version.outputs.version }}.json
